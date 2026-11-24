@@ -103,14 +103,26 @@ var __Html5QrcodeLibrary__;(()=>{var t={449:function(t,e,r){!function(t){"use st
 
   function buzz(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
 
-  function beep() {
+  function initAudio() {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.frequency.value = 880; g.gain.value = 0.15;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(); o.stop(audioCtx.currentTime + 0.12);
+      if (audioCtx.state === "suspended") audioCtx.resume();
     } catch (e) {}
+  }
+
+  function tone(freq, start, dur, type, vol) {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || "sine"; o.frequency.value = freq; g.gain.value = vol || 0.15;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(audioCtx.currentTime + start); o.stop(audioCtx.currentTime + start + dur);
+  }
+
+  function beep() {
+    try { initAudio(); tone(880, 0, 0.12); } catch (e) {}
+  }
+
+  function errBeep() {
+    try { initAudio(); tone(200, 0, 0.18, "square", 0.12); tone(200, 0.26, 0.18, "square", 0.12); } catch (e) {}
   }
 
   function hhmmss(t) { return new Date(t).toLocaleTimeString("fr-FR"); }
@@ -147,7 +159,7 @@ var __Html5QrcodeLibrary__;(()=>{var t={449:function(t,e,r){!function(t){"use st
     lastCode = code; lastTime = now;
     if (scans.some(function (s) { return s.code === code; })) {
       setStatus("warn", "Déjà scanné : " + code);
-      buzz([80, 60, 80]);
+      buzz([80, 60, 80]); errBeep();
       return;
     }
     scans.push({ code: code, t: now });
@@ -167,6 +179,7 @@ var __Html5QrcodeLibrary__;(()=>{var t={449:function(t,e,r){!function(t){"use st
       return;
     }
     setStatus("", "Démarrage de la caméra… Si le navigateur demande l’autorisation, accepte.");
+    initAudio();
     try {
       qr = qr || new Html5Qrcode("reader", { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
       await qr.start(
